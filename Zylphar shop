@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zylphar | Admin Secure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com">
+</head>
+<body class="bg-gray-50 font-sans">
+
+    <!-- নেভিগেশন বার -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-2 flex justify-between items-center">
+            <a href="#" class="flex items-center">
+                <img src="https://i.ibb.co" alt="Zylphar Logo" class="h-14 w-auto object-contain">
+            </a>
+            
+            <div class="flex items-center space-x-4">
+                <!-- অ্যাডমিন লগইন/আউট বাটন -->
+                <button id="admin-btn" onclick="handleAdminAuth()" class="bg-black text-white px-3 py-1 rounded text-sm hover:bg-gray-800 transition">
+                    <i class="fa fa-lock mr-1"></i> অ্যাডমিন লগইন
+                </button>
+                <button class="relative text-gray-700 hover:text-orange-600" onclick="toggleCart()">
+                    <i class="fa fa-shopping-cart text-2xl"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-orange-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- মেইন কন্টেন্ট -->
+    <main class="container mx-auto px-4 py-10">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <aside class="w-full lg:w-1/4">
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="font-bold text-lg mb-4 border-b pb-2">ক্যাটাগরি</h3>
+                    <ul class="space-y-3 text-gray-600">
+                        <li class="hover:text-orange-600 cursor-pointer transition">ইলেকট্রনিক্স</li>
+                        <li class="hover:text-orange-600 cursor-pointer transition">ফ্যাশন</li>
+                        <li class="hover:text-orange-600 cursor-pointer transition">গ্যাজেট</li>
+                    </ul>
+                </div>
+            </aside>
+
+            <section class="flex-1">
+                <!-- পণ্য যোগ করার বাটন (কেবল অ্যাডমিন লগইন থাকলে দেখাবে) -->
+                <div id="admin-controls" class="hidden mb-6 bg-green-50 p-4 rounded-xl border border-green-200 flex justify-between items-center">
+                    <span class="text-green-700 font-bold">অ্যাডমিন মোড সক্রিয়</span>
+                    <button onclick="toggleAdminModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                        + নতুন পণ্য যোগ করুন
+                    </button>
+                </div>
+
+                <div id="product-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <!-- Products -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- অ্যাডমিন মডাল -->
+    <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">নতুন পণ্য যোগ করুন</h2>
+                <button onclick="toggleAdminModal()" class="text-2xl">&times;</button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="new-p-name" placeholder="পণ্যের নাম" class="w-full border p-2 rounded">
+                <input type="number" id="new-p-price" placeholder="মূল্য (৳)" class="w-full border p-2 rounded">
+                <input type="text" id="new-p-img" placeholder="ইমেজ লিঙ্ক (URL)" class="w-full border p-2 rounded">
+                <button onclick="addNewProduct()" class="w-full bg-green-600 text-white py-2 rounded font-bold hover:bg-green-700">সেভ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- শপিং কার্ট ড্রয়ার (অপরিবর্তিত) -->
+    <div id="cart-drawer" class="fixed right-0 top-0 h-full w-80 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-[100] border-l">
+        <div class="p-6 h-full flex flex-col">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">আপনার কার্ট</h2>
+                <button onclick="toggleCart()" class="text-2xl text-gray-500">&times;</button>
+            </div>
+            <div id="cart-items" class="flex-1 overflow-y-auto"></div>
+            <div class="border-t pt-4">
+                <div class="flex justify-between font-bold text-lg mb-4">
+                    <span>মোট:</span> <span id="total-price">৳ ০</span>
+                </div>
+                <button class="w-full bg-orange-600 text-white py-3 rounded-xl font-bold" onclick="checkout()">চেকআউট</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_PASSWORD = "admin123"; // আপনার পাসওয়ার্ড এখানে সেট করুন
+        let isAdmin = false;
+
+        let products = JSON.parse(localStorage.getItem('zylphar_products')) ||;
+
+        let cart = [];
+
+        function handleAdminAuth() {
+            if (!isAdmin) {
+                const pass = prompt("অ্যাডমিন পাসওয়ার্ড দিন:");
+                if (pass === ADMIN_PASSWORD) {
+                    isAdmin = true;
+                    document.getElementById('admin-btn').innerHTML = '<i class="fa fa-unlock mr-1"></i> লগআউট';
+                    document.getElementById('admin-controls').classList.remove('hidden');
+                    displayProducts();
+                } else {
+                    alert("ভুল পাসওয়ার্ড!");
+                }
+            } else {
+                isAdmin = false;
+                document.getElementById('admin-btn').innerHTML = '<i class="fa fa-lock mr-1"></i> অ্যাডমিন লগইন';
+                document.getElementById('admin-controls').classList.add('hidden');
+                displayProducts();
+            }
+        }
+
+        function displayProducts() {
+            const list = document.getElementById('product-list');
+            list.innerHTML = products.map(p => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border relative group">
+                    ${isAdmin ? `<button onclick="deleteProduct(${p.id})" class="absolute top-2 right-2 bg-red-500 text-white p-1 px-2 rounded text-xs z-10">মুছে ফেলুন</button>` : ''}
+                    <div class="overflow-hidden rounded-xl mb-4">
+                        <img src="${p.image}" class="w-full h-48 object-cover">
+                    </div>
+                    <h3 class="font-bold text-gray-800">${p.name}</h3>
+                    <p class="text-orange-600 font-bold my-2">৳ ${p.price}</p>
+                    <button onclick="addToCart(${p.id})" class="w-full border-2 border-orange-600 text-orange-600 py-2 rounded-lg hover:bg-orange-600 hover:text-white transition">কার্টে যোগ করুন</button>
+                </div>
+            `).join('');
+        }
+
+        function addNewProduct() {
+            const name = document.getElementById('new-p-name').value;
+            const price = document.getElementById('new-p-price').value;
+            const img = document.getElementById('new-p-img').value;
+
+            if(!name || !price || !img) return alert("সব তথ্য দিন!");
+
+            products.push({ id: Date.now(), name, price: parseInt(price), image: img });
+            localStorage.setItem('zylphar_products', JSON.stringify(products));
+            displayProducts();
+            toggleAdminModal();
+            // Clear fields
+            document.getElementById('new-p-name').value = '';
+            document.getElementById('new-p-price').value = '';
+            document.getElementById('new-p-img').value = '';
+        }
+
+        function deleteProduct(id) {
+            if(confirm("পণ্যটি মুছে ফেলতে চান?")) {
+                products = products.filter(p => p.id !== id);
+                localStorage.setItem('zylphar_products', JSON.stringify(products));
+                displayProducts();
+            }
+        }
+
+        function toggleAdminModal() { document.getElementById('admin-modal').classList.toggle('hidden'); }
+        function toggleCart() { document.getElementById('cart-drawer').classList.toggle('translate-x-full'); }
+        
+        function addToCart(id) {
+            cart.push(products.find(p => p.id === id));
+            document.getElementById('cart-count').innerText = cart.length;
+            const total = cart.reduce((s, p) => s + p.price, 0);
+            document.getElementById('total-price').innerText = `৳ ${total}`;
+            alert("কার্টে যোগ হয়েছে!");
+        }
+
+        function checkout() { alert("অর্ডার সফল হয়েছে!"); cart = []; document.getElementById('cart-count').innerText = "0"; toggleCart(); }
+
+        displayProducts();
+    </script>
+</body>
+</html>
